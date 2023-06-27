@@ -9,19 +9,31 @@ stop_stage=$2
 num_keywords=2599
 keyword="你 好 小 镜"
 
-config=conf/ds_tcn_ctc.yaml
+config=conf/ds_tcn_ctc_aug.yaml
 norm_mean=true
 norm_var=true
-gpus="5"
+gpus="4"
 data=data_ctc
 checkpoint=
-dir=exp/ds_tcn_ctc
+dir=exp/ds_tcn_ctc_aug
 average_model=true
 num_average=30
 if $average_model ;then
   score_checkpoint=$dir/avg_${num_average}.pt
 else
   score_checkpoint=$dir/final.pt
+fi
+
+#noise and reverb set
+noise_scp=$data/noise.scp
+noise_lmdb=$data/noise.lmdb
+if [ ! -d $noise_lmdb ]; then
+  python tools/make_lmdb.py $noise_scp $noise_lmdb
+fi
+rir_scp=$data/rir.scp
+rir_lmdb=$data/rir.lmdb
+if [ ! -d $rir_lmdb ]; then
+  python tools/make_lmdb.py $rir_scp $rir_lmdb
 fi
 
 . tools/parse_options.sh || exit 1;
@@ -127,12 +139,14 @@ if [ ${stage} -le 2 ] && [ ${stop_stage} -ge 2 ]; then
     fi
     checkpoint=mobvoi_kws_transcription/23.pt    # this ckpt may not converge well.
   fi
-
-  torchrun --standalone --nnodes=1 --nproc_per_node=$num_gpus \
-    wekws/bin/train.py --gpus $gpus \
+  checkpoint=$dir/43.pt
+  #torchrun --standalone --nnodes=1 --nproc_per_node=$num_gpus \
+  LOCAL_RANK=0  WORLD_SIZE=1 python  wekws/bin/train.py --gpus $gpus \
       --config $config \
       --train_data $data/train/data.list \
       --cv_data $data/dev/data.list \
+      --reverb_lmdb  $rir_lmdb  \
+      --noise_lmdb  $noise_lmdb  \
       --model_dir $dir \
       --num_workers 8 \
       --num_keywords $num_keywords \

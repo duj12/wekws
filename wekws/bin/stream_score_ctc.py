@@ -44,11 +44,11 @@ def get_args():
                         help='gpu id for this rank, -1 for cpu')
     parser.add_argument('--checkpoint', required=True, help='checkpoint model')
     parser.add_argument('--batch_size',
-                        default=16,
+                        default=1,
                         type=int,
                         help='batch size for inference')
     parser.add_argument('--num_workers',
-                        default=0,
+                        default=1,
                         type=int,
                         help='num of subprocess workers for reading')
     parser.add_argument('--pin_memory',

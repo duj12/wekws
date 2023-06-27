@@ -292,7 +292,7 @@ class KeyWordSpotter(torch.nn.Module):
 
         wave = np.array(data)
         wave = np.append(self.wave_remained, wave)
-        if wave.size < self.frame_length * self.sample_rate / 1000 :
+        if wave.size < (self.frame_length * self.sample_rate / 1000) * self.right_context :
             self.wave_remained = wave
             return None
         wave_tensor = torch.from_numpy(wave).float().to(self.device)
@@ -402,13 +402,14 @@ class KeyWordSpotter(torch.nn.Module):
 
     def forward(self, wave_chunk):
         feature = self.accept_wave(wave_chunk)
-        if feature is None:
+        if feature is None or feature.size(0) < 1:
             return self.result
         feature = feature.unsqueeze(0)   # add a batch dimension
         logits, self.in_cache = self.model(feature, self.in_cache)
         probs = logits.softmax(2)  # (batch_size, maxlen, vocab_size)
         probs = probs[0].cpu()   # remove batch dimension, move to cpu for ctc_prefix_beam_search
         for (t, prob) in enumerate(probs):
+            t *= self.downsampling
             self.decode_keywords(t, prob)
             self.execute_detection(t)
 
@@ -417,7 +418,7 @@ class KeyWordSpotter(torch.nn.Module):
                 # since a chunk include about 30 frames, once activated, we can jump the latter frames.
                 # TODO: there should give another method to update result, avoiding self.result being cleared.
                 break
-        self.total_frames += len(probs)  # update frame offset
+        self.total_frames += len(probs) * self.downsampling  # update frame offset
         return self.result
 
     def reset(self):

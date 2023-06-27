@@ -9,13 +9,13 @@ stop_stage=$2
 num_keywords=2599
 keyword="你 好 小 镜"
 
-config=conf/fsmn_ctc.yaml
+config=conf/fsmn_ctc_aug.yaml
 norm_mean=true
 norm_var=true
-gpus="5"
+gpus="6"
 data=data_ctc
 checkpoint=
-dir=exp/fsmn_ctc
+dir=exp/fsmn_ctc_aug
 average_model=true
 num_average=30
 if $average_model ;then
@@ -23,6 +23,19 @@ if $average_model ;then
 else
   score_checkpoint=$dir/final.pt
 fi
+
+#noise and reverb set
+noise_scp=$data/noise.scp
+noise_lmdb=$data/noise.lmdb
+if [ ! -d $noise_lmdb ]; then
+  python tools/make_lmdb.py $noise_scp $noise_lmdb
+fi
+rir_scp=$data/rir.scp
+rir_lmdb=$data/rir.lmdb
+if [ ! -d $rir_lmdb ]; then
+  python tools/make_lmdb.py $rir_scp $rir_lmdb
+fi
+
 
 . tools/parse_options.sh || exit 1;
 window_shift=50
@@ -44,12 +57,14 @@ if [ ${stage} -le 2 ] && [ ${stop_stage} -ge 2 ]; then
   $norm_mean && cmvn_opts="--cmvn_file $data/global_cmvn.kaldi"
   $norm_var && cmvn_opts="$cmvn_opts --norm_var"
   num_gpus=$(echo $gpus | awk -F ',' '{print NF}')
-  checkpoint=$dir/54.pt
-  #torchrun --standalone --nnodes=1 --nproc_per_node=$num_gpus \
-  LOCAL_RANK=0  WORLD_SIZE=1 python  wekws/bin/train.py --gpus $gpus \
+  checkpoint=$dir/13.pt
+  torchrun --standalone --nnodes=1 --nproc_per_node=$num_gpus \
+    wekws/bin/train.py --gpus $gpus \
       --config $config \
       --train_data $data/train/data.list \
       --cv_data $data/dev/data.list \
+      --reverb_lmdb  $rir_lmdb  \
+      --noise_lmdb  $noise_lmdb  \
       --model_dir $dir \
       --num_workers 2 \
       --num_keywords $num_keywords \

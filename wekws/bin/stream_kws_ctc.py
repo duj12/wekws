@@ -212,7 +212,7 @@ class KeyWordSpotter(torch.nn.Module):
             self.left_context = dataset_conf['context_expansion_conf']['left']
             self.right_context = dataset_conf['context_expansion_conf']['right']
         self.feature_remained = None
-        self.feature_context_offset = 0  # after downsample, offset exist.
+        self.feats_ctx_offset = 0  # after downsample, offset exist.
 
 
         # model related
@@ -318,7 +318,7 @@ class KeyWordSpotter(torch.nn.Module):
             else:
                 feats_pad = torch.cat((self.feature_remained, feats))
 
-            ctx_frm = feats.shape[0] - self.right_context
+            ctx_frm = feats_pad.shape[0] - (self.right_context+self.right_context)
             ctx_win = (self.left_context + self.right_context + 1)
             ctx_dim = feats.shape[1] * ctx_win
             feats_ctx = torch.zeros(ctx_frm, ctx_dim, dtype=torch.float32)
@@ -326,12 +326,13 @@ class KeyWordSpotter(torch.nn.Module):
                 feats_ctx[i] = torch.cat(tuple(feats_pad[i: i + ctx_win])).unsqueeze(0)
 
             # update feature remained, and feats
-            self.feature_remained = feats[-self.left_context:]
+            self.feature_remained = feats[-(self.left_context+self.right_context):]
             feats = feats_ctx.to(self.device)
         if self.downsampling > 1:
-            feats = feats[self.feature_context_offset::self.downsampling, :]
-            complement = feats.size(1) % self.downsampling
-            self.feature_context_offset = complement if complement == 0 else self.downsampling-complement
+            last_remainder = 0 if self.feats_ctx_offset==0 else self.downsampling-self.feats_ctx_offset
+            remainder = (feats.size(0)+last_remainder) % self.downsampling
+            feats = feats[self.feats_ctx_offset::self.downsampling, :]
+            self.feats_ctx_offset = remainder if remainder == 0 else self.downsampling-remainder
         return feats
 
     def decode_keywords(self, t, probs):
@@ -430,7 +431,7 @@ class KeyWordSpotter(torch.nn.Module):
         self.reset()
         self.wave_remained = np.array([])
         self.feature_remained = None
-        self.feature_context_offset = 0  # after downsample, offset exist.
+        self.feats_ctx_offset = 0  # after downsample, offset exist.
         self.in_cache = torch.zeros(0, 0, 0, dtype=torch.float)
         self.total_frames = 0   # frame offset, for absolute time
         self.result = {}

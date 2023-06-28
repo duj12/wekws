@@ -16,7 +16,8 @@ from __future__ import print_function
 
 import argparse
 import struct
-import wave
+#import wave
+import librosa
 import logging
 import os
 import math
@@ -203,7 +204,7 @@ class KeyWordSpotter(torch.nn.Module):
         self.frame_length = dataset_conf['feature_extraction_conf']['frame_length']  # in ms
         self.frame_shift = dataset_conf['feature_extraction_conf']['frame_shift']    # in ms
         self.downsampling = dataset_conf.get('frame_skip', 1)
-        self.resolution = self.frame_shift / 1000 * self.downsampling   # in second
+        self.resolution = self.frame_shift / 1000   # in second
         # fsmn splice operation
         self.context_expansion = dataset_conf.get('context_expansion', False)
         self.left_context = 0
@@ -471,9 +472,13 @@ def demo():
     if args.wav_path:
         # Caution: input WAV should be standard 16k, 16 bits, 1 channel
         # In demo we read wave in non-streaming fashion.
-        with wave.open(args.wav_path, 'rb') as fin:
-            assert fin.getnchannels() == 1
-            wav = fin.readframes(fin.getnframes())
+        # with wave.open(args.wav_path, 'rb') as fin:
+        #     assert fin.getnchannels() == 1
+        #     wav = fin.readframes(fin.getnframes())
+
+        y, _ = librosa.load(args.wav_path, sr=16000, mono=True)
+        # NOTE: model supports 16k sample_rate
+        wav = (y * (1 << 15)).astype("int16").tobytes()
 
         # We inference every 0.3 seconds, in streaming fashion.
         interval = int(0.3 * 16000) * 2

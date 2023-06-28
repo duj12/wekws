@@ -139,7 +139,7 @@ if [ ${stage} -le 2 ] && [ ${stop_stage} -ge 2 ]; then
     fi
     checkpoint=mobvoi_kws_transcription/23.pt    # this ckpt may not converge well.
   fi
-  checkpoint=$dir/43.pt
+  #checkpoint=$dir/43.pt
   #torchrun --standalone --nnodes=1 --nproc_per_node=$num_gpus \
   LOCAL_RANK=0  WORLD_SIZE=1 python  wekws/bin/train.py --gpus $gpus \
       --config $config \

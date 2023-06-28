@@ -57,9 +57,9 @@ if [ ${stage} -le 2 ] && [ ${stop_stage} -ge 2 ]; then
   $norm_mean && cmvn_opts="--cmvn_file $data/global_cmvn.kaldi"
   $norm_var && cmvn_opts="$cmvn_opts --norm_var"
   num_gpus=$(echo $gpus | awk -F ',' '{print NF}')
-  checkpoint=$dir/13.pt
-  torchrun --standalone --nnodes=1 --nproc_per_node=$num_gpus \
-    wekws/bin/train.py --gpus $gpus \
+  #checkpoint=$dir/13.pt
+  #torchrun --standalone --nnodes=1 --nproc_per_node=$num_gpus \
+  LOCAL_RANK=0  WORLD_SIZE=1 python   wekws/bin/train.py --gpus $gpus \
       --config $config \
       --train_data $data/train/data.list \
       --cv_data $data/dev/data.list \

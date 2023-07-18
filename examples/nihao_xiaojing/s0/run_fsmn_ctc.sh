@@ -12,8 +12,9 @@ keyword="你 好 小 镜"
 config=conf/fsmn_ctc.yaml
 norm_mean=true
 norm_var=true
-gpus="5"
+gpus="0"
 data=data_ctc
+test=test
 checkpoint=
 dir=exp/fsmn_ctc
 average_model=true
@@ -68,7 +69,7 @@ if [ ${stage} -le 3 ] && [ ${stop_stage} -ge 3 ]; then
       --num ${num_average} \
       --val_best
   fi
-  result_dir=$dir/test_$(basename $score_checkpoint)
+  result_dir=$dir/${test}_$(basename $score_checkpoint)
   mkdir -p $result_dir
   stream=true   # we detect keyword online with ctc_prefix_beam_search
   score_prefix=""
@@ -77,7 +78,7 @@ if [ ${stage} -le 3 ] && [ ${stop_stage} -ge 3 ]; then
   fi
   python wekws/bin/${score_prefix}score_ctc.py \
     --config $dir/config.yaml \
-    --test_data $data/test/data.list \
+    --test_data $data/${test}/data.list \
     --gpu 0  \
     --batch_size 256 \
     --checkpoint $score_checkpoint \
@@ -89,7 +90,7 @@ if [ ${stage} -le 3 ] && [ ${stop_stage} -ge 3 ]; then
 
   python wekws/bin/compute_det_ctc.py \
       --keywords 你好小镜 \
-      --test_data $data/test/data.list \
+      --test_data $data/${test}/data.list \
       --window_shift $window_shift \
       --step 0.001  \
       --score_file $result_dir/score.txt \

@@ -10,8 +10,8 @@ num_keywords=1
 config=conf/ds_tcn.yaml
 norm_mean=true
 norm_var=true
-gpus="4"
-
+gpus="0"
+test=test
 checkpoint=
 dir=exp/ds_tcn
 
@@ -27,7 +27,7 @@ if [ ${stage} -le 1 ] && [ ${stop_stage} -ge 1 ]; then
     --in_scp data/train/wav.scp \
     --out_cmvn data/train/global_cmvn
 
-  for x in train dev test; do
+  for x in train dev $test; do
     tools/wav_to_duration.sh --nj 8 data/$x/wav.scp data/$x/wav.dur
     tools/make_list.py data/$x/wav.scp data/$x/text \
       data/$x/wav.dur data/$x/data.list
@@ -63,11 +63,11 @@ if [ ${stage} -le 3 ] && [ ${stop_stage} -ge 3 ]; then
     --src_path $dir  \
     --num ${num_average} \
     --val_best
-  result_dir=$dir/test_$(basename $score_checkpoint)
+  result_dir=$dir/${test}_$(basename $score_checkpoint)
   mkdir -p $result_dir
   python wekws/bin/score.py \
     --config $dir/config.yaml \
-    --test_data data/test/data.list \
+    --test_data data/${test}/data.list \
     --gpu 0 \
     --batch_size 256 \
     --checkpoint $score_checkpoint \
@@ -77,7 +77,7 @@ if [ ${stage} -le 3 ] && [ ${stop_stage} -ge 3 ]; then
   for keyword in 0 ; do
     python wekws/bin/compute_det.py \
       --keyword $keyword \
-      --test_data data/test/data.list \
+      --test_data data/${test}/data.list \
       --window_shift $window_shift \
       --score_file $result_dir/score.txt \
       --stats_file $result_dir/stats.${keyword}.txt

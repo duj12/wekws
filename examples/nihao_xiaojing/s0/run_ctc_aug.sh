@@ -12,8 +12,9 @@ keyword="你 好 小 镜"
 config=conf/ds_tcn_ctc_aug.yaml
 norm_mean=true
 norm_var=true
-gpus="4"
+gpus="0"
 data=data_ctc
+test=test
 checkpoint=
 dir=exp/ds_tcn_ctc_aug
 average_model=true
@@ -49,7 +50,7 @@ if [ ${stage} -le -1 ] && [ ${stop_stage} -ge -1 ]; then
 # Here we Use Paraformer Large(https://www.modelscope.cn/models/damo/speech_paraformer-large_asr_nat-zh-cn-16k-common-vocab8404-pytorch/summary)
 # to transcribe the negative wavs, and upload the transcription to modelscope.
   git clone https://www.modelscope.cn/datasets/thuduj12/mobvoi_kws_transcription.git
-  for folder in train dev test; do
+  for folder in train dev $test; do
     if [ -f $data/$folder/text ];then
       mv $data/$folder/text $data/$folder/text.label
       cat  $data/$folder/text.label | sed "s/ 0/ $keyword/g" | sed "s/ -1/ /g" >  $data/$folder/text
@@ -69,7 +70,7 @@ if [ ${stage} -le 0 ] && [ ${stop_stage} -ge 0 ]; then
     --in_scp $data/train/wav.scp \
     --out_cmvn $data/train/global_cmvn
 
-  for x in train dev test; do
+  for x in train dev $test; do
     tools/wav_to_duration.sh --nj 8 $data/$x/wav.scp $data/$x/wav.dur
 
     # Here we use tokens.txt and lexicon.txt to convert txt into index
@@ -165,7 +166,7 @@ if [ ${stage} -le 3 ] && [ ${stop_stage} -ge 3 ]; then
       --num ${num_average} \
       --val_best
   fi
-  result_dir=$dir/test_$(basename $score_checkpoint)
+  result_dir=$dir/${test}_$(basename $score_checkpoint)
   mkdir -p $result_dir
   stream=true  # we detect keyword online with ctc_prefix_beam_search
   score_prefix=""
@@ -174,7 +175,7 @@ if [ ${stage} -le 3 ] && [ ${stop_stage} -ge 3 ]; then
   fi
   python wekws/bin/${score_prefix}score_ctc.py \
     --config $dir/config.yaml \
-    --test_data $data/test/data.list \
+    --test_data $data/${test}/data.list \
     --gpu 0  \
     --batch_size 256 \
     --checkpoint $score_checkpoint \
@@ -186,7 +187,7 @@ if [ ${stage} -le 3 ] && [ ${stop_stage} -ge 3 ]; then
 
   python wekws/bin/compute_det_ctc.py \
       --keywords 你好小镜 \
-      --test_data $data/test/data.list \
+      --test_data $data/${test}/data.list \
       --window_shift $window_shift \
       --step 0.001  \
       --score_file $result_dir/score.txt \

@@ -145,28 +145,29 @@ if [ ${stage} -le 3 ] && [ ${stop_stage} -ge 3 ]; then
     --checkpoint $score_checkpoint \
     --score_file $result_dir/score.txt  \
     --num_workers 8  \
-    --keywords 嗨小问,你好问问 \
+    --keywords "\u55e8\u5c0f\u95ee,\u4f60\u597d\u95ee\u95ee" \
     --token_file data/tokens.txt \
     --lexicon_file data/lexicon.txt
 
   python wekws/bin/compute_det_ctc.py \
-      --keywords 嗨小问,你好问问 \
+      --keywords "\u55e8\u5c0f\u95ee,\u4f60\u597d\u95ee\u95ee" \
       --test_data data/test/data.list \
       --window_shift $window_shift \
       --step 0.001  \
       --score_file $result_dir/score.txt \
-      --token_file $data/tokens.txt \
-      --lexicon_file $data/lexicon.txt
+      --token_file data/tokens.txt \
+      --lexicon_file data/lexicon.txt
 fi
 
 
 if [ ${stage} -le 4 ] && [ ${stop_stage} -ge 4 ]; then
   jit_model=$(basename $score_checkpoint | sed -e 's:.pt$:.zip:g')
   onnx_model=$(basename $score_checkpoint | sed -e 's:.pt$:.onnx:g')
-  python wekws/bin/export_jit.py \
-    --config $dir/config.yaml \
-    --checkpoint $score_checkpoint \
-    --jit_model $dir/$jit_model
+  # For now, FSMN can not export to JITScript
+#  python wekws/bin/export_jit.py \
+#    --config $dir/config.yaml \
+#    --checkpoint $score_checkpoint \
+#    --jit_model $dir/$jit_model
   python wekws/bin/export_onnx.py \
     --config $dir/config.yaml \
     --checkpoint $score_checkpoint \
